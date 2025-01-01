@@ -1,0 +1,29 @@
+.app-container {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+}
+
+.main-content {
+  max-width: 1200px;
+  width: 100%;
+  margin: 2rem auto;
+  padding: 0 20px;
+  display: grid;
+  gap: 30px;
+}
+
+.header {
+  border-bottom: none;
+}
+
+nav {
+  border-bottom: none;
+}
+
+.nav-links,
+.nav-menu,
+.header-container {
+  border-bottom: none;
+}

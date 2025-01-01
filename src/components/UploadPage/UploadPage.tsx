@@ -1,10 +1,15 @@
 import { useState } from 'react'
 import './UploadPage.css'
 
+
 export const UploadPage = () => {
   const [selectedPlatforms, setSelectedPlatforms] = useState<string[]>([])
   const [useCommonTitle, setUseCommonTitle] = useState(true)
   const [isPublic, setIsPublic] = useState(true)
+  const [commonTitle, setCommonTitle] = useState('')
+  const [platformTitles, setPlatformTitles] = useState<Record<string, string>>({})
+
+  const MAX_TITLE_LENGTH = 100
 
   const platforms = [
     { id: 'vk', name: 'VK Video' },
@@ -48,7 +53,6 @@ export const UploadPage = () => {
                     alt={platform.name}
                     className="platform-icon"
                   />
-                  <span className="platform-name">{platform.name}</span>
                 </div>
               ))}
             </div>
@@ -73,14 +77,46 @@ export const UploadPage = () => {
                 />
                 <span>Использовать общий заголовок</span>
               </label>
-              {!useCommonTitle && selectedPlatforms.map(platform => (
-                <input 
-                  key={platform}
-                  type="text" 
-                  placeholder={`Заголовок для ${platforms.find(p => p.id === platform)?.name}`}
-                  className="form-input platform-input"
-                />
-              ))}
+              {useCommonTitle ? (
+                <div className="title-input-wrapper">
+                  <input 
+                    type="text"
+                    value={commonTitle}
+                    onChange={(e) => setCommonTitle(e.target.value.slice(0, MAX_TITLE_LENGTH))}
+                    placeholder="Введите общий заголовок"
+                    className={`form-input ${commonTitle.length === MAX_TITLE_LENGTH ? 'max-length' : ''}`}
+                  />
+                  <span className="title-counter">
+                    <span className={commonTitle.length === MAX_TITLE_LENGTH ? 'max-length' : ''}>
+                      {commonTitle.length}
+                    </span>
+                    /{MAX_TITLE_LENGTH}
+                  </span>
+                </div>
+              ) : (
+                selectedPlatforms.map(platform => (
+                  <div key={platform} className="title-input-wrapper">
+                    <input 
+                      type="text"
+                      value={platformTitles[platform] || ''}
+                      onChange={(e) => setPlatformTitles(prev => ({
+                        ...prev,
+                        [platform]: e.target.value.slice(0, MAX_TITLE_LENGTH)
+                      }))}
+                      placeholder={`Заголовок для ${platforms.find(p => p.id === platform)?.name}`}
+                      className={`form-input platform-input ${
+                        (platformTitles[platform]?.length || 0) === MAX_TITLE_LENGTH ? 'max-length' : ''
+                      }`}
+                    />
+                    <span className="title-counter">
+                      <span className={(platformTitles[platform]?.length || 0) === MAX_TITLE_LENGTH ? 'max-length' : ''}>
+                        {platformTitles[platform]?.length || 0}
+                      </span>
+                      /{MAX_TITLE_LENGTH}
+                    </span>
+                  </div>
+                ))
+              )}
             </div>
 
             <div className="form-group">

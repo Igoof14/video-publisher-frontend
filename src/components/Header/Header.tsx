@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { SunIcon, MoonIcon } from '../Icons/ThemeIcons'
 import { UserIcon, SettingsIcon, LogoutIcon } from '../Icons/MenuIcons'
@@ -15,8 +15,28 @@ export const Header = () => {
   })
   
   const [isMenuOpen, setIsMenuOpen] = useState(false)
+  const menuRef = useRef<HTMLDivElement>(null)
+  const buttonRef = useRef<HTMLButtonElement>(null)
   const location = useLocation()
   const [user, setUser] = useState<{ name: string; avatar?: string } | null>({ name: 'Александр' })
+
+  // Обработчик клика вне меню
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        isMenuOpen && 
+        menuRef.current && 
+        buttonRef.current && 
+        !menuRef.current.contains(event.target as Node) &&
+        !buttonRef.current.contains(event.target as Node)
+      ) {
+        setIsMenuOpen(false)
+      }
+    }
+
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [isMenuOpen])
 
   useEffect(() => {
     const root = document.documentElement
@@ -77,6 +97,7 @@ export const Header = () => {
           {user ? (
             <div className="user-menu">
               <button 
+                ref={buttonRef}
                 className="user-button"
                 onClick={() => setIsMenuOpen(!isMenuOpen)}
                 aria-label="Меню пользователя"
@@ -91,7 +112,7 @@ export const Header = () => {
               </button>
 
               {isMenuOpen && (
-                <div className="user-dropdown" onClick={() => setIsMenuOpen(false)}>
+                <div ref={menuRef} className="user-dropdown">
                   <div className="dropdown-header">
                     <span className="user-avatar large">
                       {user.avatar ? (
@@ -106,16 +127,19 @@ export const Header = () => {
                     </div>
                   </div>
                   <nav className="dropdown-nav">
-                    <Link to="/profile" className="dropdown-item">
+                    <Link to="/profile" className="dropdown-item" onClick={() => setIsMenuOpen(false)}>
                       <UserIcon />
                       <span>Профиль</span>
                     </Link>
-                    <Link to="/settings" className="dropdown-item">
+                    <Link to="/settings" className="dropdown-item" onClick={() => setIsMenuOpen(false)}>
                       <SettingsIcon />
                       <span>Настройки</span>
                     </Link>
                     <button 
-                      onClick={() => setUser(null)} 
+                      onClick={() => {
+                        setUser(null)
+                        setIsMenuOpen(false)
+                      }} 
                       className="dropdown-item logout"
                     >
                       <LogoutIcon />

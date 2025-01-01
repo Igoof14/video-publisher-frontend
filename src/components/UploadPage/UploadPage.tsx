@@ -6,8 +6,13 @@ export const UploadPage = () => {
   const [selectedPlatforms, setSelectedPlatforms] = useState<string[]>([])
   const [useCommonTitle, setUseCommonTitle] = useState(true)
   const [isPublic, setIsPublic] = useState(true)
+  const [isKidsContent, setIsKidsContent] = useState(false)
+  const [ageRestriction, setAgeRestriction] = useState<'0+' | '6+' | '12+' | '16+' | '18+'>('0+')
   const [commonTitle, setCommonTitle] = useState('')
   const [platformTitles, setPlatformTitles] = useState<Record<string, string>>({})
+  const [dragActive, setDragActive] = useState(false)
+  const [uploadedFile, setUploadedFile] = useState<File | null>(null)
+  const [uploadProgress, setUploadProgress] = useState(0)
 
   const MAX_TITLE_LENGTH = 100
 
@@ -25,17 +30,105 @@ export const UploadPage = () => {
     )
   }
 
+  const handleDrag = (e: React.DragEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    if (e.type === "dragenter" || e.type === "dragover") {
+      setDragActive(true)
+    } else if (e.type === "dragleave") {
+      setDragActive(false)
+    }
+  }
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    setDragActive(false)
+
+    const file = e.dataTransfer.files?.[0]
+    if (file && file.type.startsWith('video/')) {
+      handleFile(file)
+    }
+  }
+
+  const handleFileInput = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (file) {
+      handleFile(file)
+    }
+  }
+
+  const handleFile = (file: File) => {
+    setUploadedFile(file)
+    // Имитация загрузки
+    setUploadProgress(0)
+    const interval = setInterval(() => {
+      setUploadProgress(prev => {
+        if (prev >= 100) {
+          clearInterval(interval)
+          return 100
+        }
+        return prev + 10
+      })
+    }, 500)
+  }
+
   return (
     <div className="upload-page">
       <div className="upload-section">
         <div className="upload-section-headers">
           <div className="upload-header">
             <h3>Загрузка видео</h3>
-            <div className="upload-area">
-              <span className="upload-icon">↑</span>
-              <p className="upload-text">Перетащите видео сюда или нажмите для выбора файла</p>
-              <button className="upload-button">Выбрать файл</button>
-              <input type="file" className="upload-input" accept="video/*" />
+            <div 
+              className={`upload-area ${dragActive ? 'dragging' : ''} ${uploadedFile ? 'has-file' : ''}`}
+              onDragEnter={handleDrag}
+              onDragLeave={handleDrag}
+              onDragOver={handleDrag}
+              onDrop={handleDrop}
+            >
+              {!uploadedFile ? (
+                <>
+                  <span className="upload-icon">↑</span>
+                  <p className="upload-text">
+                    Перетащите видео сюда или нажмите для выбора файла
+                  </p>
+                  <button 
+                    className="upload-button"
+                    onClick={() => document.getElementById('file-input')?.click()}
+                  >
+                    Выбрать файл
+                  </button>
+                  <input 
+                    id="file-input"
+                    type="file" 
+                    className="upload-input" 
+                    accept="video/*"
+                    onChange={handleFileInput}
+                  />
+                </>
+              ) : (
+                <div className="upload-progress">
+                  <div className="file-info">
+                    <div className="file-details">
+                      <span className="file-name">{uploadedFile.name}</span>
+                      <span className="file-size">
+                        {(uploadedFile.size / (1024 * 1024)).toFixed(2)} MB
+                      </span>
+                    </div>
+                  </div>
+                  <div className="progress-bar">
+                    <div 
+                      className="progress-fill"
+                      style={{ width: `${uploadProgress}%` }}
+                    />
+                  </div>
+                  {uploadProgress === 100 && (
+                    <div className="upload-success">
+                      <span>Загрузка завершена</span>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           </div>
           <div className="header-spacer"></div>
@@ -67,16 +160,18 @@ export const UploadPage = () => {
             <div className="form-group">
               <div className="form-header">
                 <label htmlFor="title">Заголовок</label>
+                <div className="toggle-wrapper">
+                  <span className="toggle-label">Использовать общий заголовок</span>
+                  <label className="toggle-switch">
+                    <input 
+                      type="checkbox"
+                      checked={useCommonTitle}
+                      onChange={(e) => setUseCommonTitle(e.target.checked)}
+                    />
+                    <span className="toggle-slider"></span>
+                  </label>
+                </div>
               </div>
-              <label className="checkbox-label">
-                <input 
-                  type="checkbox" 
-                  className="checkbox-input"
-                  checked={useCommonTitle}
-                  onChange={(e) => setUseCommonTitle(e.target.checked)} 
-                />
-                <span>Использовать общий заголовок</span>
-              </label>
               {useCommonTitle ? (
                 <div className="title-input-wrapper">
                   <input 
@@ -120,21 +215,6 @@ export const UploadPage = () => {
             </div>
 
             <div className="form-group">
-              <div className="form-header">
-                <label>Настройки доступа</label>
-              </div>
-              <label className="checkbox-label">
-                <input 
-                  type="checkbox" 
-                  className="checkbox-input"
-                  checked={isPublic}
-                  onChange={(e) => setIsPublic(e.target.checked)}
-                />
-                <span>Публичное видео</span>
-              </label>
-            </div>
-
-            <div className="form-group">
               <label htmlFor="description">Описание</label>
               <textarea 
                 id="description" 
@@ -142,6 +222,73 @@ export const UploadPage = () => {
                 className="form-input"
                 rows={4}
               />
+            </div>
+
+            <div className="form-group">
+              <div className="form-header">
+                <label>Настройки доступа</label>
+              </div>
+              <div className="access-cards">
+                <div className="access-card">
+                  <div className="access-title">Доступ к видео</div>
+                  <div className="access-options">
+                    <div 
+                      className={`access-option ${isPublic ? 'active' : ''}`}
+                      onClick={() => setIsPublic(true)}
+                    >
+                      <span className="option-title">Публичное</span>
+                      <span className="option-description">Видео доступно всем</span>
+                    </div>
+                    <div 
+                      className={`access-option ${!isPublic ? 'active' : ''}`}
+                      onClick={() => setIsPublic(false)}
+                    >
+                      <span className="option-title">По ссылке</span>
+                      <span className="option-description">Доступ только по ссылке</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="access-card">
+                  <div className="access-title">Возрастной контент</div>
+                  <div className="access-options">
+                    <div 
+                      className={`access-option ${ageRestriction !== '18+' ? 'active' : ''}`}
+                      onClick={() => setAgeRestriction('0+')}
+                    >
+                      <span className="option-title">Без ограничений</span>
+                      <span className="option-description">Подходит для всех возрастов</span>
+                    </div>
+                    <div 
+                      className={`access-option ${ageRestriction === '18+' ? 'active' : ''}`}
+                      onClick={() => setAgeRestriction('18+')}
+                    >
+                      <span className="option-title">18+</span>
+                      <span className="option-description">Контент для взрослых</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="access-card">
+                  <div className="access-title">Тип контента</div>
+                  <div className="access-options">
+                    <div 
+                      className={`access-option ${!isKidsContent ? 'active' : ''}`}
+                      onClick={() => setIsKidsContent(false)}
+                    >
+                      <span className="option-title">Обычный</span>
+                      <span className="option-description">Стандартный контент</span>
+                    </div>
+                    <div 
+                      className={`access-option ${isKidsContent ? 'active' : ''}`}
+                      onClick={() => setIsKidsContent(true)}
+                    >
+                      <span className="option-title">Детский</span>
+                      <span className="option-description">Контент для детей</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
 
             <div className="form-group">
@@ -155,10 +302,34 @@ export const UploadPage = () => {
             </div>
 
             <div className="form-group">
-              <label>Превью</label>
-              <div className="thumbnail-upload">
-                <button className="upload-button">Загрузить превью</button>
-                <p className="thumbnail-hint">Рекомендуемый размер: 1280x720</p>
+              <label>Превью видео</label>
+              <div className="preview-upload">
+                <div className="preview-area">
+                  <div className="preview-placeholder">
+                    <span className="preview-icon">+</span>
+                    <span className="preview-text">Загрузите или перетащите изображение</span>
+                    <span className="preview-hint">JPG или PNG, рекомендуемый размер 1280×720</span>
+                  </div>
+                  <input 
+                    type="file" 
+                    className="preview-input" 
+                    accept="image/jpeg,image/png"
+                  />
+                </div>
+                <div className="preview-options">
+                  <div className="preview-option">
+                    <span className="option-time">00:00</span>
+                    <span className="option-label">Автоматический скриншот</span>
+                  </div>
+                  <div className="preview-option">
+                    <span className="option-time">01:23</span>
+                    <span className="option-label">Ключевой момент</span>
+                  </div>
+                  <div className="preview-option">
+                    <span className="option-time">02:45</span>
+                    <span className="option-label">Яркий момент</span>
+                  </div>
+                </div>
               </div>
             </div>
 
